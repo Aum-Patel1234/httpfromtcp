@@ -2,7 +2,7 @@ package networking
 
 import (
 	"fmt"
-	filesystem "httpfromtcp/fileSystem"
+	"httpfromtcp/internal/request"
 	"log"
 	"net"
 )
@@ -19,9 +19,17 @@ func Listen() {
 			log.Fatal("error", "error", err)
 		}
 
-		lines := filesystem.GetLinesChannel(conn)
-		for line := range lines {
-			fmt.Printf("read: %s\n", line)
+		// lines := filesystem.GetLinesChannel(conn)
+		lines, err := request.RequestFromReader(conn)
+		if err != nil {
+			log.Println("Error while reading from tcp connection: ", err)
+			return
 		}
+		// for line := range lines {
+		// 	fmt.Printf("read: %s\n", line)
+		// }
+		fmt.Println("Request Line:")
+		fmt.Printf(" - Method: %s\n - Target: %s\n - Version: %s\n", lines.RequestLine.Method, lines.RequestLine.RequestTarget, lines.RequestLine.HttpVersion)
+
 	}
 }
