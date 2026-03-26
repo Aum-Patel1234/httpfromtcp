@@ -30,6 +30,9 @@ func Listen() {
 		// }
 		fmt.Println("Request Line:")
 		fmt.Printf(" - Method: %s\n - Target: %s\n - Version: %s\n", lines.RequestLine.Method, lines.RequestLine.RequestTarget, lines.RequestLine.HttpVersion)
-
+		fmt.Println("Headers:")
+		for k, v := range lines.Headers.All() {
+			fmt.Printf("- %s : %s\n", k, v)
+		}
 	}
 }
