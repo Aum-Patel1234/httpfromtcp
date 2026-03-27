@@ -23,6 +23,7 @@ func Listen() {
 		lines, err := request.RequestFromReader(conn)
 		if err != nil {
 			log.Println("Error while reading from tcp connection: ", err)
+			conn.Close()
 			return
 		}
 		// for line := range lines {
@@ -34,5 +35,7 @@ func Listen() {
 		for k, v := range lines.Headers.All() {
 			fmt.Printf("- %s : %s\n", k, v)
 		}
+		fmt.Println("Body:")
+		fmt.Println(string(lines.Body))
 	}
 }

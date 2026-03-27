@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"httpfromtcp/internal/headers"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -14,6 +15,7 @@ type RequestState int
 const (
 	StateInitialized RequestState = iota
 	StateHeaders
+	StateBody
 	StateDone
 )
 
@@ -26,7 +28,22 @@ type RequestLine struct {
 type Request struct {
 	RequestLine RequestLine
 	Headers     *headers.Headers
+	Body        []byte
 	state       RequestState
+}
+
+func getInt(headers headers.Headers, name string, defautlValue int) int {
+	val, exists := headers.Get(name)
+	if !exists {
+		return defautlValue
+	}
+
+	value, err := strconv.Atoi(val)
+	if err != nil {
+		return defautlValue
+	}
+
+	return value
 }
 
 func parseRequestLine(b string) (*RequestLine, int, error) {
@@ -60,6 +77,9 @@ func (r *Request) parse(data []byte) (int, error) {
 
 	for {
 		currentData := data[read:]
+		if len(currentData) == 0 {
+			break
+		}
 
 		switch r.state {
 		case StateInitialized:
@@ -87,6 +107,24 @@ func (r *Request) parse(data []byte) (int, error) {
 
 			read += n
 			if done {
+				if r.hasBody() {
+					r.state = StateBody
+				} else {
+					r.state = StateDone
+				}
+			}
+
+		case StateBody:
+			contentLength := getInt(*r.Headers, "content-length", 0)
+			if contentLength == 0 {
+				panic("chunk encoding not impelemented")
+			}
+
+			remaining := min(contentLength-len(r.Body), len(currentData))
+			r.Body = append(r.Body, currentData[:remaining]...)
+			read += remaining
+
+			if len(r.Body) == contentLength {
 				r.state = StateDone
 			}
 
@@ -97,14 +135,20 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 	}
 
+	return read, nil
 }
 
+func (r *Request) hasBody() bool {
+	// TODO: when doing chunk encoding update this
+	length := getInt(*r.Headers, "content-length", 0)
+	return length > 0
+}
 func (r *Request) StateDone() bool {
 	return r.state == StateDone
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	request := Request{RequestLine{}, headers.NewHeaders(), StateInitialized}
+	request := Request{RequestLine{}, headers.NewHeaders(), []byte(""), StateInitialized}
 	// NOTE: can overrun buffer with len more than 1kb
 	buf := make([]byte, 1024)
 	bufLen := 0

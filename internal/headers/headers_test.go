@@ -14,7 +14,9 @@ func TestHeaders(t *testing.T) {
 	n, done, err := headers.Parse(data)
 	require.NoError(t, err)
 	require.NotNil(t, headers)
-	assert.Equal(t, "localhost:42069", headers.Get("Host"))
+	host, ok := headers.Get("host")
+	assert.True(t, ok)
+	assert.Equal(t, "localhost:42069", host)
 	assert.Equal(t, 25, n)
 	assert.True(t, done)
 
@@ -46,8 +48,12 @@ func TestHeaders(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, headers)
 	// CSV merge happens
-	assert.Equal(t, "localhost:42069,example.com", headers.Get("Host"))
-	assert.Equal(t, "curl/7.81.0", headers.Get("User-Agent"))
+	host, ok = headers.Get("host")
+	assert.True(t, ok)
+	assert.Equal(t, "localhost:42069,example.com", host)
+	useragent, ok := headers.Get("User-Agent")
+	assert.True(t, ok)
+	assert.Equal(t, "curl/7.81.0", useragent)
 	assert.Equal(t, len(data), n)
 	assert.True(t, done)
 }
